@@ -1,23 +1,21 @@
-import type { Root as SeismeWsMessage } from "../../models/Seisme.ts";
-import { useWebSocketMessageJson } from "./useWebSocket.ts";
-import {Card, CardContent, Typography, CardMedia} from "@mui/material";
+import type {Root as SeismeWsMessage} from "../../models/Seisme.ts";
+import {useWebSocketMessageJson} from "./useWebSocket.ts";
+import {Card, CardContent, CardMedia, Typography} from "@mui/material";
 import seisme from "../../assets/seisme.jpg";
 //npm install react-leaflet leaflet
 // npm install -D @types/leaflet
 // # (optionnel suivant ta conf, mais parfois nécessaire)
 // npm install -D @types/react-leaflet
 //npm run dev
-
 import "leaflet/dist/leaflet.css";
-import {MapContainer, TileLayer, Marker, Popup, AttributionControl, useMap} from "react-leaflet";
+import {AttributionControl, MapContainer, Marker, Popup, TileLayer, useMap} from "react-leaflet";
 import {useEffect} from "react";
+// import {useEffect} from "react";
 
 export const CardWebSocketSeismeCarte = () => {
-    const { etatWs, message } = useWebSocketMessageJson({
-        url: "wss://www.seismicportal.eu/standing_order/websocket",
-        params: JSON.stringify({
-            type: "subscribe",
-            data: {}
+    const {etatWs, message} = useWebSocketMessageJson({
+        url: "wss://www.seismicportal.eu/standing_order/websocket", params: JSON.stringify({
+            type: "subscribe", data: {}
         }),
     });
 
@@ -36,89 +34,87 @@ export const CardWebSocketSeismeCarte = () => {
 
     const hasPosition = typeof latitude === "number" && typeof longitude === "number";
 
-    const RecenterOnChange: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
+    // Renommé en ReCenterMapView pour être plus explicite et conventionnel pour un composant
+    // destructuring avec typage TypeScript inline
+    const ReCenterMapView = ({lat, lng}: { lat: number, lng: number }) => {
         const map = useMap();
         useEffect(() => {
-            map.setView([lat, lng]); // ou map.flyTo([lat, lng], 5);
+            map.flyTo([lat, lng], 5);
         }, [lat, lng, map]);
-        return null;
+        return null; // Ce composant ne rend rien visuellement
     };
 
-    return (
-        <Card elevation={8} sx={{ width: "100%", maxWidth: 280, height: "auto", borderRadius: 4 }}>
-            {hasPosition ? (
-                // on gère la carte juste après
-                <CardMedia
-                    component="div"
-                    sx={{ height: 140, width: "100%" }}
+    return (<Card elevation={8} sx={{width: "100%", maxWidth: 280, height: "auto", borderRadius: 4}}>
+        {hasPosition ? (// on gère la carte juste après
+            <CardMedia
+                component="div"
+                sx={{height: 140, width: "100%"}}
+            >
+                <MapContainer
+                    center={[latitude, longitude]}
+                    zoom={5}
+                    scrollWheelZoom={false}
+                    style={{height: "140px", width: "100%"}}
+                    attributionControl={false}
                 >
-                    <MapContainer
-                        center={[latitude, longitude]}
-                        zoom={5}
-                        scrollWheelZoom={false}
-                        style={{ height: "140px", width: "100%" }}
-                        attributionControl={false}
-                    >
-                        <TileLayer
-                            attribution="Seisme"
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <AttributionControl position="bottomright" prefix={false} />
-                        {/* ajout : recentrage à chaque changement de coordonnées */}
-                        <RecenterOnChange lat={latitude} lng={longitude} />
-                        <Marker position={[latitude, longitude]}>
-                            <Popup>
-                                Séisme
-                                <br />
-                                Magnitude : {magnitude ?? "—"}
-                                <br />
-                                Position : {latitude}, {longitude}
-                            </Popup>
-                        </Marker>
-                    </MapContainer>
-                </CardMedia>
-            ) : (
-                <CardMedia
-                    component="img"
-                    height="140"
-                    image={seisme}
-                    alt="Illustration d’un séisme"
-                    sx={{ width: "100%", objectFit: "cover", display: "block" }}
-                />
-            )}
+                    <style>{`
+                        .leaflet-control-attribution {
+                            background-color: red !important;
+                            color: white !important;
+                        }
+  `                 }
+                    </style>
+                    <TileLayer
+                        attribution="Seisme"
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <AttributionControl position="bottomright" prefix={false}/>
+                    {/* ajout : recentrage à chaque changement de coordonnées */}
+                    <ReCenterMapView lat={latitude} lng={longitude}/> <Marker position={[latitude, longitude]}>
+                    <Popup>
+                        Séisme
+                        <br/>
+                        Magnitude : {magnitude ?? "—"}
+                        <br/>
+                        Position : {latitude}, {longitude}
+                    </Popup>
+                </Marker>
+                </MapContainer>
+            </CardMedia>) : (<CardMedia
+            component="img"
+            height="140"
+            image={seisme}
+            alt="Illustration d’un séisme"
+            sx={{width: "100%", objectFit: "cover", display: "block"}}
+        />)}
 
-            <CardContent>
-                <Typography gutterBottom variant="h6" component="div">
-                    Séisme{" "}
-                    <Typography component="span" sx={{fontSize: "0.5em", ml: 1}}>
-                        ({etatWs})
-                    </Typography>
+        <CardContent>
+            <Typography gutterBottom variant="h6" component="div">
+                Séisme{" "}
+                <Typography component="span" sx={{fontSize: "0.5em", ml: 1}}>
+                    ({etatWs})
                 </Typography>
+            </Typography>
 
-                {!message ? (
-                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                        En attente d’un évènement…
-                    </Typography>
-                ) : (
-                    <>
-                        <Typography variant="body2" sx={{ color: "text.secondary", fontFamily: "monospace" }}>
-                            Magnitude : {magnitude ?? "—"}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: "text.secondary", fontFamily: "monospace" }}>
-                            Région : {region ?? "—"}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: "text.secondary", fontFamily: "monospace" }}>
-                            Heure : {time ?? "—"}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: "text.secondary", fontFamily: "monospace" }}>
-                            Profondeur : {depth ?? "—"} km
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: "text.secondary", fontFamily: "monospace" }}>
-                            Position : {latitude ?? "—"}, {longitude ?? "—"}
-                        </Typography>
-                    </>
-                )}
-            </CardContent>
-        </Card>
-    );
+            {!message ? (<Typography variant="body2" sx={{color: "text.secondary"}}>
+                En attente d’un évènement…
+            </Typography>) : (<>
+                <Typography variant="body2" sx={{color: "text.secondary", fontFamily: "monospace"}}>
+                    Magnitude : {magnitude ?? "—"}
+                </Typography>
+                <Typography variant="body2" sx={{color: "text.secondary", fontFamily: "monospace"}}>
+                    Région : {region ?? "—"}
+                </Typography>
+                <Typography variant="body2" sx={{color: "text.secondary", fontFamily: "monospace"}}>
+                    Heure : {time ?? "—"}
+                </Typography>
+                <Typography variant="body2" sx={{color: "text.secondary", fontFamily: "monospace"}}>
+                    Profondeur : {depth ?? "—"} km
+                </Typography>
+                <Typography variant="body2" sx={{color: "text.secondary", fontFamily: "monospace"}}>
+                    Position : {latitude ?? "—"}, {longitude ?? "—"}
+                </Typography>
+            </>)}
+        </CardContent>
+    </Card>);
 };
